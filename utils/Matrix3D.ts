@@ -301,14 +301,14 @@ class Matrix3D implements Clonable<Matrix3D> {
     }
 
 	// 旋转
-    public appendRotation(rad: number, axis: Vector3D): void {
+    public appendRotation(degree: number, axis: Vector3D): void {
 
         Matrix3D.sharedMatrix3D.identity()
-        Matrix3D.sharedMatrix3D.prependRotation(rad, axis);
+        Matrix3D.sharedMatrix3D.prependRotation(degree, axis);
         this.append(Matrix3D.sharedMatrix3D)
     }
 
-	public prependRotation(rad: number, axis: Vector3D): Float32Array {
+	public prependRotation(degree: number, axis: Vector3D): Float32Array {
 
         var out: Float32Array = this.data;
         var a: Float32Array = this.data;
@@ -331,8 +331,8 @@ class Matrix3D implements Clonable<Matrix3D> {
         y *= len;
         z *= len;
 
-        s = Math.sin(rad * Math.PI / 180);
-        c = Math.cos(rad * Math.PI / 180);
+        s = Math.sin(degree * Math.PI / 180);
+        c = Math.cos(degree * Math.PI / 180);
         t = 1 - c;
 
         a00 = a[0]; a01 = a[1]; a02 = a[2]; a03 = a[3];
@@ -499,6 +499,20 @@ class Matrix3D implements Clonable<Matrix3D> {
     //     $q.fromMatrix(this)
     //     return $q.toEulerAngles(target);
     // }
+
+    /**
+     * 方便点的操作
+     */
+    public setPosition(x:number, y:number, z:number):void {
+        this.data[12] = x;
+        this.data[13] = y;
+        this.data[14] = z;
+        this.data[15] = 1;
+    }
+
+    public getPosition(vec:Vector3D):void {
+        vec.reset(this.data[12], this.data[13], this.data[14], this.data[15]);
+    }
 
 	public position(): Vector3D {
         return new Vector3D(this.data[12], this.data[13], this.data[14], this.data[15]);

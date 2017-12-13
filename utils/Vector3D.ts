@@ -81,10 +81,11 @@ class Vector3D extends VectorBase<Vector3D> implements Clonable<Vector3D> {
         this.z += z;
     }
 
-    public reset(x: number, y: number, z: number): void {
+    public reset(x: number, y: number, z: number, w:number=1): void {
         this.x = x;
         this.y = y;
         this.z = z;
+        this.w = w;
     }
 
     public cross(value: Vector3D): Vector3D {

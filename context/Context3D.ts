@@ -209,12 +209,18 @@ class Context3D implements Tick<void> {
         var latitudeBands = 36;
         var radius = 2;
 
-        var sphere:Sphere = new Sphere(radius, latitudeBands, longitudeBands);
-        var sd:SphereData = sphere.getSphereData();
+        // var sd:GeometryData = Sphere.getInstance().getSphereData(radius, latitudeBands, longitudeBands);
+        // var sd:GeometryData = Circle.getInstance().getCircleData(radius, longitudeBands);
+        // var sd:GeometryData = Cuboid.getInstance().getCuboidData(2, 3, 4);
+        // var sd:GeometryData = Annulus.getInstance().getAnnulusData(2, 1, 36);
+        // var sd:GeometryData = Torus.getInstance().getTorusData(3, 1, 36, 36);
+        // var sd:GeometryData = Cylinder.getInstance().getPillarData(1, 1, 3, 1, 3);
+        var sd:GeometryData = Cone.getInstance().getPyramidData(1, 1.732, 3);
+
         // console.log(sd.vertexPositionData);
-        // console.log(sd.textureCoordData);
-        // console.log(sd.normalData);
         // console.log(sd.indexData);
+        // console.log(sd.normalData);
+        // console.log(sd.textureCoordData);
 
         // 顶点坐标
         this.moonVertexPositionBuffer = this.renderContext.createBuffer();
@@ -428,7 +434,7 @@ class Context3D implements Tick<void> {
         // Camera3D.getInstance().setCameraCoordinate(0, 0, 0);
         // var cameraMat:Matrix3D = Camera3D.getInstance().getCameraMatrix(0, 0);
         // this.mvMatrix.append(cameraMat);
-
+        
         this.mvMatrix.appendTranslation(0, 0, 6);
         this.mvMatrix.prepend(this.moonRotationMatrix);
 
@@ -491,10 +497,6 @@ class Context3D implements Tick<void> {
             // this.pitch += this.pitchRate * elapsed;
         }
         this.lastTime = timeNow;
-    }
-
-    private degToRad(angle:number):number {
-        return angle * Math.PI / 180.0;
     }
 
     private effectiveFPMS = 60 / 1000;

@@ -12,8 +12,8 @@ class Texture {
 		var image = new Image();
 		image.onload = function () {
 			callback(image);
-        }
-        image.src = src;
+		}
+		image.src = src;
 	}
 
 	public loadImages(srcArray:Array<string>, callback:Function) {
