@@ -8,10 +8,10 @@ class Texture {
 		return Texture.instance;
 	}
 
-	public loadImage(src:string, callback:Function):void {
+	public loadImage(src:string, callback:Function, index:number = 0):void {
 		var image = new Image();
 		image.onload = function () {
-			callback(image);
+			callback(image, index);
 		}
 		image.src = src;
 	}
@@ -19,10 +19,14 @@ class Texture {
 	public loadImages(srcArray:Array<string>, callback:Function) {
 		var count = 0;
 		var size = srcArray.length;
+		// 全部填满先
 		var dest:Array<any> = new Array<any>();
+		for (var i = 0; i < size; ++ i) {
+			dest.push(null);
+		}
 
-		var func:Function = function(image) {
-			dest.push(image);
+		var func:Function = function(image, index) {
+			dest[index] = image;
 			count ++;
 			if (count == size) {
 				callback(dest);
@@ -30,7 +34,7 @@ class Texture {
 		}
 
 		for (var i = 0; i < srcArray.length; ++ i) {
-			Texture.getInstance().loadImage(srcArray[ i ], func);
+			Texture.getInstance().loadImage(srcArray[ i ], func, i);
 		}
 	}
 }
