@@ -11,8 +11,8 @@ class Engine implements Tick<void> {
 		return Engine.engine;
 	}
 
-	public init(canvas:HTMLCanvasElement, fragShaderInfo:any, vertShaderInfo:any):void {
-		Context3D.getInstance().init(canvas, fragShaderInfo, vertShaderInfo);
+	public init(canvas:HTMLCanvasElement, shaderInfo:Object):void {
+		Context3D.getInstance().init(canvas, shaderInfo);
 	}
 
 	public update(param:any):void {
