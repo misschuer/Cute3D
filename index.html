@@ -28,131 +28,45 @@
 </head>
 
 <script id="shader-fs" type="x-shader/x-fragment">
-    // precision mediump float;
-    // varying vec4 vColor;
-    // void main(void) {
-    //     gl_FragColor = vColor;
-    // }
-
     precision mediump float;
-    varying vec2 vTextureCoord;
-    varying vec3 vLightWeighting;
 
-    uniform bool uUseTextures;
-    uniform sampler2D uSampler;
- 
-    void main(void) {
-        vec4 fragmentColor;
-        if (uUseTextures) {
-            fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-        } else {
-            fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
-        }
-
-         gl_FragColor = vec4(fragmentColor.rgb * vLightWeighting, fragmentColor.a);
-    }
-
-    // precision mediump float;
-    // varying vec2 vTextureCoord;
-
-    // uniform sampler2D uSampler;
- 
-    // void main(void) {
-    //      gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-    // }
-</script>
-
-<script id="shader-vs" type="x-shader/x-vertex">
-    // attribute vec3 aVertexPosition;
-    // attribute vec4 aVertexColor;
-
-    // uniform mat4 uMVMatrix;
-    // uniform mat4 uPMatrix;
-
-    // varying vec4 vColor;
- 
-    // void main(void) {
-    //     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-    //     vColor = aVertexColor;
-    // }
-
-
-    attribute vec3 aVertexPosition;
-    attribute vec3 aVertexNormal;
-    attribute vec2 aTextureCoord;
- 
-    uniform mat4 uMVMatrix;
-    uniform mat4 uPMatrix;
-    uniform mat4 uNMatrix;
-
-    uniform vec3 uAmbientColor;
-
-    uniform vec3 uPointLightingLocation;
-    uniform vec3 uPointLightingColor;
-
-    uniform bool uUseLighting;
-
-    varying vec2 vTextureCoord;
-    varying vec3 vLightWeighting;
- 
-    void main(void) {
-        vec4 mvPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
-        gl_Position = uPMatrix * mvPosition;
-        vTextureCoord = aTextureCoord;
-
-        if (!uUseLighting) {
-            vLightWeighting = vec3(1.0, 1.0, 1.0);
-        } else {
-            vec3 lightDirection = normalize(uPointLightingLocation - mvPosition.xyz);
-            vec3 transformedNormal = (uNMatrix * vec4(aVertexNormal, 1.0)).xyz;
-            float directionalLightWeighting = max(dot(transformedNormal, lightDirection), 0.0);
-            vLightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
-        }
-    }
-    // attribute vec3 aVertexPosition;
-    // attribute vec2 aTextureCoord;
- 
-    // uniform mat4 uMVMatrix;
-    // uniform mat4 uPMatrix;
-
-    // varying vec2 vTextureCoord;
- 
-    // void main(void) {
-    //     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-    //     vTextureCoord = aTextureCoord;
-    // }
-
-</script>
-
-<!-- 片元 级光照 -->
-<script id="per-fragment-lighting-fs" type="x-shader/x-fragment">
- 
-    precision mediump float;
- 
     varying vec2 vTextureCoord;
     varying vec3 vTransformedNormal;
     varying vec4 vPosition;
- 
+
+    uniform float uMaterialShininess;
+
+    uniform bool uShowSpecularHighlights;
     uniform bool uUseLighting;
     uniform bool uUseTextures;
- 
+
     uniform vec3 uAmbientColor;
- 
+
     uniform vec3 uPointLightingLocation;
-    uniform vec3 uPointLightingColor;
- 
+    uniform vec3 uPointLightingSpecularColor;
+    uniform vec3 uPointLightingDiffuseColor;
+
     uniform sampler2D uSampler;
- 
- 
+
     void main(void) {
         vec3 lightWeighting;
         if (!uUseLighting) {
             lightWeighting = vec3(1.0, 1.0, 1.0);
         } else {
             vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
- 
-            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
-            lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
+            vec3 normal = normalize(vTransformedNormal);
+
+            float specularLightWeighting = 0.0;
+            if (uShowSpecularHighlights) {
+                vec3 eyeDirection = normalize(-vPosition.xyz);
+                vec3 reflectionDirection = reflect(-lightDirection, normal);
+                specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+            }
+
+            float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
+            lightWeighting = uAmbientColor 
+                + uPointLightingSpecularColor * specularLightWeighting
+                + uPointLightingDiffuseColor * diffuseLightWeighting;
         }
  
         vec4 fragmentColor;
@@ -165,7 +79,7 @@
     }
 </script>
 
-<script id="per-fragment-lighting-vs" type="x-shader/x-vertex">
+<script id="shader-vs" type="x-shader/x-vertex">
     attribute vec3 aVertexPosition;
     attribute vec3 aVertexNormal;
     attribute vec2 aTextureCoord;
@@ -178,7 +92,6 @@
     varying vec3 vTransformedNormal;
     varying vec4 vPosition;
  
- 
     void main(void) {
         vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
         gl_Position = uPMatrix * vPosition;
@@ -186,7 +99,6 @@
         vTransformedNormal = (uNMatrix * vec4(aVertexNormal, 1.0)).xyz;
     }
 </script>
-
 
 <script>
     var loadScript = function (list, callback) {
@@ -268,30 +180,27 @@
 
     function update() {
         var param = new Object();
-        // param.twinkle = document.getElementById("twinkle").checked;
-
+       
+        param.specular = document.getElementById("specular").checked;
         param.lighting = document.getElementById("lighting").checked;
-        if (param.lighting) {
-            param.ambientR = parseFloat(document.getElementById("ambientR").value);
-            param.ambientG = parseFloat(document.getElementById("ambientG").value);
-            param.ambientB = parseFloat(document.getElementById("ambientB").value);
+        param.texture = document.getElementById("texture").value;
+        param.shininess = parseFloat(document.getElementById("shininess").value);
 
-            param.lightDirectionX = parseFloat(document.getElementById("lightDirectionX").value);
-            param.lightDirectionY = parseFloat(document.getElementById("lightDirectionY").value);
-            param.lightDirectionZ = parseFloat(document.getElementById("lightDirectionZ").value);
-        
-            param.directionalR = parseFloat(document.getElementById("directionalR").value);
-            param.directionalG = parseFloat(document.getElementById("directionalG").value);
-            param.directionalB = parseFloat(document.getElementById("directionalB").value);
-        }
+        param.lightPositionX = parseFloat(document.getElementById("lightPositionX").value);
+        param.lightPositionY = parseFloat(document.getElementById("lightPositionY").value);
+        param.lightPositionZ = parseFloat(document.getElementById("lightPositionZ").value);
+    
+        param.specularR = parseFloat(document.getElementById("specularR").value);
+        param.specularG = parseFloat(document.getElementById("specularG").value);
+        param.specularB = parseFloat(document.getElementById("specularB").value);
 
-        param.per_fragment = document.getElementById("per-fragment").checked;
-        param.textures = document.getElementById("textures").checked;
+        param.diffuseR = parseFloat(document.getElementById("diffuseR").value);
+        param.diffuseG = parseFloat(document.getElementById("diffuseG").value);
+        param.diffuseB = parseFloat(document.getElementById("diffuseB").value);
 
-        // param.blending = document.getElementById("blending").checked;
-        // if (param.blending) {
-        //     param.alpha = parseFloat(document.getElementById("alpha").value);
-        // }
+        param.ambientR = parseFloat(document.getElementById("ambientR").value);
+        param.ambientG = parseFloat(document.getElementById("ambientG").value);
+        param.ambientB = parseFloat(document.getElementById("ambientB").value);
 
         Engine.getInstance().update(param);
     }
@@ -334,41 +243,60 @@
 
 <body onload='onLoadScript()' ontouchmove="event.preventDefault()">
     <canvas id="ArpgStageCanvas" width="800" height="500" style="z-index:-1;"></canvas>
-    <div>
 
-        <br />
-        <input type="checkbox" id="lighting" checked /> 开启光照<br/>
-        <input type="checkbox" id="per-fragment" checked />启用逐片元光照<br/>
-        <input type="checkbox" id="textures" checked />启用纹理贴图<br/>
-        <br/>
-        <h2>点光源：</h2>
+    <br/>
+    <input type="checkbox" id="specular" checked />启用镜面高光<br/>
+    <input type="checkbox" id="lighting" checked />启用光照<br/>
 
-        <table style="border: 0; padding: 10px;">
-            <tr>
-                <td><b>光源位置：</b>
-                <td>X: <input type="text" id="lightDirectionX" value="0" />
-                <td>Y: <input type="text" id="lightDirectionY" value="-3" />
-                <td>Z: <input type="text" id="lightDirectionZ" value="12" />
-            </tr>
-            <tr>
-                <td><b>颜色：</b>
-                <td>R: <input type="text" id="directionalR" value="0.8" />
-                <td>G: <input type="text" id="directionalG" value="0.8" />
-                <td>B: <input type="text" id="directionalB" value="0.8" />
-            </tr>
-        </table>
+    纹理：
+    <select id="texture">
+        <option value="none">不使用纹理</option>
+        <option selected value="galvanized">电镀金属</option>
+        <option value="earth">地球</option>
+    </select>
+    <br/>
 
-        <h2>环境光：</h2>
-        <table style="border: 0; padding: 10px;">
-            <tr>
-                <td><b>颜色：</b>
-                <td>R: <input type="text" id="ambientR" value="0.2" />
-                <td>G: <input type="text" id="ambientG" value="0.2" />
-                <td>B: <input type="text" id="ambientB" value="0.2" />
-            </tr>
-        </table>
-    </div>
-    
+    <h2>材质：</h2>
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>光泽度：</b>
+            <td><input type="text" id="shininess" value="32.0" />
+        </tr>
+    </table>
+
+    <h2>点光源：</h2>
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>位置：</b>
+            <td>X: <input type="text" id="lightPositionX" value="-10.0" />
+            <td>Y: <input type="text" id="lightPositionY" value="4.0" />
+            <td>Z: <input type="text" id="lightPositionZ" value="-20.0" />
+        </tr>
+        <tr>
+            <td><b>镜面反射颜色：</b>
+            <td>R: <input type="text" id="specularR" value="0.8" />
+            <td>G: <input type="text" id="specularG" value="0.8" />
+            <td>B: <input type="text" id="specularB" value="0.8" />
+        </tr>
+        <tr>
+            <td><b>漫反射颜色：</b>
+            <td>R: <input type="text" id="diffuseR" value="0.8" />
+            <td>G: <input type="text" id="diffuseG" value="0.8" />
+            <td>B: <input type="text" id="diffuseB" value="0.8" />
+        </tr>
+    </table>
+
+
+    <h2>环境光：</h2>
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>颜色：</b>
+            <td>R: <input type="text" id="ambientR" value="0.2" />
+            <td>G: <input type="text" id="ambientG" value="0.2" />
+            <td>B: <input type="text" id="ambientB" value="0.2" />
+        </tr>
+    </table>
+    <br/>
 
 </body>
 
