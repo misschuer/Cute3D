@@ -1,0 +1,375 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Cute</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <meta content="IE=11.00" http-equiv="X-UA-Compatible" />
+    <meta name="viewport" content="width=device-width,initial-scale=1, minimum-scale=1, maximum-scale=1, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="apple-touch-icon-precomposed" href="icon.png" />
+    <link rel="touch-icon-precomposed" href="icon.png" />
+
+    <style>
+        body {
+            background: #888888;
+            padding: 0;
+            border: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    // precision mediump float;
+    // varying vec4 vColor;
+    // void main(void) {
+    //     gl_FragColor = vColor;
+    // }
+
+    precision mediump float;
+    varying vec2 vTextureCoord;
+    varying vec3 vLightWeighting;
+
+    uniform bool uUseTextures;
+    uniform sampler2D uSampler;
+ 
+    void main(void) {
+        vec4 fragmentColor;
+        if (uUseTextures) {
+            fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        } else {
+            fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+
+         gl_FragColor = vec4(fragmentColor.rgb * vLightWeighting, fragmentColor.a);
+    }
+
+    // precision mediump float;
+    // varying vec2 vTextureCoord;
+
+    // uniform sampler2D uSampler;
+ 
+    // void main(void) {
+    //      gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+    // }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    // attribute vec3 aVertexPosition;
+    // attribute vec4 aVertexColor;
+
+    // uniform mat4 uMVMatrix;
+    // uniform mat4 uPMatrix;
+
+    // varying vec4 vColor;
+ 
+    // void main(void) {
+    //     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    //     vColor = aVertexColor;
+    // }
+
+
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec2 aTextureCoord;
+ 
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+
+    uniform vec3 uAmbientColor;
+
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingColor;
+
+    uniform bool uUseLighting;
+
+    varying vec2 vTextureCoord;
+    varying vec3 vLightWeighting;
+ 
+    void main(void) {
+        vec4 mvPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+        gl_Position = uPMatrix * mvPosition;
+        vTextureCoord = aTextureCoord;
+
+        if (!uUseLighting) {
+            vLightWeighting = vec3(1.0, 1.0, 1.0);
+        } else {
+            vec3 lightDirection = normalize(uPointLightingLocation - mvPosition.xyz);
+            vec3 transformedNormal = (uNMatrix * vec4(aVertexNormal, 1.0)).xyz;
+            float directionalLightWeighting = max(dot(transformedNormal, lightDirection), 0.0);
+            vLightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
+        }
+    }
+    // attribute vec3 aVertexPosition;
+    // attribute vec2 aTextureCoord;
+ 
+    // uniform mat4 uMVMatrix;
+    // uniform mat4 uPMatrix;
+
+    // varying vec2 vTextureCoord;
+ 
+    // void main(void) {
+    //     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    //     vTextureCoord = aTextureCoord;
+    // }
+
+</script>
+
+<!-- 片元 级光照 -->
+<script id="per-fragment-lighting-fs" type="x-shader/x-fragment">
+ 
+    precision mediump float;
+ 
+    varying vec2 vTextureCoord;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+ 
+    uniform bool uUseLighting;
+    uniform bool uUseTextures;
+ 
+    uniform vec3 uAmbientColor;
+ 
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingColor;
+ 
+    uniform sampler2D uSampler;
+ 
+ 
+    void main(void) {
+        vec3 lightWeighting;
+        if (!uUseLighting) {
+            lightWeighting = vec3(1.0, 1.0, 1.0);
+        } else {
+            vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+ 
+            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
+            lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
+        }
+ 
+        vec4 fragmentColor;
+        if (uUseTextures) {
+            fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        } else {
+            fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+        gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+    }
+</script>
+
+<script id="per-fragment-lighting-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec2 aTextureCoord;
+ 
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat4 uNMatrix;
+ 
+    varying vec2 vTextureCoord;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+ 
+ 
+    void main(void) {
+        vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+        gl_Position = uPMatrix * vPosition;
+        vTextureCoord = aTextureCoord;
+        vTransformedNormal = (uNMatrix * vec4(aVertexNormal, 1.0)).xyz;
+    }
+</script>
+
+
+<script>
+    var loadScript = function (list, callback) {
+        var loaded = 0;
+        var loadNext = function () {
+            loadSingleScript(list[loaded], function () {
+                loaded++;
+                if (loaded >= list.length) {
+                    callback();
+                }
+                else {
+                    loadNext();
+                }
+            })
+        };
+        loadNext();
+    };
+
+    var loadSingleScript = function (src, callback) {
+        var s = document.createElement('script');
+        s.async = false;
+        s.src = src;
+        s.addEventListener('load', function () {
+            s.parentNode.removeChild(s);
+            s.removeEventListener('load', arguments.callee, false);
+            callback();
+        }, false);
+        document.body.appendChild(s);
+    };
+
+    function onLoadScript() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', './manifest.json?v=' + Math.random(), true);
+        xhr.addEventListener("load", function () {
+            var manifest = JSON.parse(xhr.response);
+            var list = manifest.initial.concat(manifest.game);
+            loadScript(list, function () {
+                init();
+            });
+        });
+        xhr.send(null);
+    }
+
+    function init() {
+        
+        var canvas = document.getElementById('ArpgStageCanvas');
+        var fragShaderInfo = getShaderInfo("shader-fs");
+        var vertShaderInfo = getShaderInfo("shader-vs");
+        var frag2ShaderInfo = getShaderInfo("per-fragment-lighting-fs");
+        var vert2ShaderInfo = getShaderInfo("per-fragment-lighting-vs");
+        var shaderInfo = {};
+        shaderInfo.fragShaderInfo = fragShaderInfo;
+        shaderInfo.vertShaderInfo = vertShaderInfo;
+        shaderInfo.frag2ShaderInfo = frag2ShaderInfo;
+        shaderInfo.vert2ShaderInfo = vert2ShaderInfo;
+       
+        Engine.getInstance().init(canvas, shaderInfo);
+        
+        window.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame 
+        /*
+        || function (callback) {
+            window.setTimeout(callback, 1000 / 60.0);
+        }
+        */
+        ;
+
+        if (requestAnimationFrame ) {
+            requestAnimationFrame(step);
+        }
+        //setInterval("update()", 1000);//特别加一次系统时间的UPdata
+    }
+
+    function step(timestamp) {
+        // console.log(timestamp)
+        update()
+        requestAnimationFrame(step);
+        //window.setTimeout(nextFun, 1000 / 60)
+    }
+
+    function update() {
+        var param = new Object();
+        // param.twinkle = document.getElementById("twinkle").checked;
+
+        param.lighting = document.getElementById("lighting").checked;
+        if (param.lighting) {
+            param.ambientR = parseFloat(document.getElementById("ambientR").value);
+            param.ambientG = parseFloat(document.getElementById("ambientG").value);
+            param.ambientB = parseFloat(document.getElementById("ambientB").value);
+
+            param.lightDirectionX = parseFloat(document.getElementById("lightDirectionX").value);
+            param.lightDirectionY = parseFloat(document.getElementById("lightDirectionY").value);
+            param.lightDirectionZ = parseFloat(document.getElementById("lightDirectionZ").value);
+        
+            param.directionalR = parseFloat(document.getElementById("directionalR").value);
+            param.directionalG = parseFloat(document.getElementById("directionalG").value);
+            param.directionalB = parseFloat(document.getElementById("directionalB").value);
+        }
+
+        param.per_fragment = document.getElementById("per-fragment").checked;
+        param.textures = document.getElementById("textures").checked;
+
+        // param.blending = document.getElementById("blending").checked;
+        // if (param.blending) {
+        //     param.alpha = parseFloat(document.getElementById("alpha").value);
+        // }
+
+        Engine.getInstance().update(param);
+    }
+
+    function getShaderInfo(id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+ 
+        var obj = new Object();
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+        obj.program = str;
+        obj.type = shaderScript.type;
+
+        return obj;
+    }
+</script>
+
+<body>
+    <div class="egret-player"
+         data-orientation="auto"
+         data-scale-mode="showAll"
+         data-frame-rate="30"
+         data-content-width="800"
+         data-content-height="600"
+         data-show-paint-rect="false"
+         data-multi-fingered="2"
+         data-show-fps="false" data-show-log="false"
+         data-show-fps-style="x:0,y:0,size:12,textColor:0xffffff,bgAlpha:0.9">
+    </div>
+</body>
+
+<body onload='onLoadScript()' ontouchmove="event.preventDefault()">
+    <canvas id="ArpgStageCanvas" width="800" height="500" style="z-index:-1;"></canvas>
+    <div>
+
+        <br />
+        <input type="checkbox" id="lighting" checked /> 开启光照<br/>
+        <input type="checkbox" id="per-fragment" checked />启用逐片元光照<br/>
+        <input type="checkbox" id="textures" checked />启用纹理贴图<br/>
+        <br/>
+        <h2>点光源：</h2>
+
+        <table style="border: 0; padding: 10px;">
+            <tr>
+                <td><b>光源位置：</b>
+                <td>X: <input type="text" id="lightDirectionX" value="0" />
+                <td>Y: <input type="text" id="lightDirectionY" value="-3" />
+                <td>Z: <input type="text" id="lightDirectionZ" value="12" />
+            </tr>
+            <tr>
+                <td><b>颜色：</b>
+                <td>R: <input type="text" id="directionalR" value="0.8" />
+                <td>G: <input type="text" id="directionalG" value="0.8" />
+                <td>B: <input type="text" id="directionalB" value="0.8" />
+            </tr>
+        </table>
+
+        <h2>环境光：</h2>
+        <table style="border: 0; padding: 10px;">
+            <tr>
+                <td><b>颜色：</b>
+                <td>R: <input type="text" id="ambientR" value="0.2" />
+                <td>G: <input type="text" id="ambientG" value="0.2" />
+                <td>B: <input type="text" id="ambientB" value="0.2" />
+            </tr>
+        </table>
+    </div>
+    
+
+</body>
+
+</html>
