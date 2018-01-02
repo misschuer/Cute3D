@@ -1,0 +1,25 @@
+{
+	"groups": [
+		{
+			"name": "preload",
+			"keys": "glass_gif,star_gif,moon_gif"
+		}
+	],
+	"resources": [
+		{
+			"name": "glass_gif",
+			"type": "image",
+			"url": "glass.gif"
+		},
+		{
+			"name": "star_gif",
+			"type": "image",
+			"url": "star.gif"
+		},
+		{
+			"name": "moon_gif",
+			"type": "image",
+			"url": "moon.gif"
+		}
+	]
+}
